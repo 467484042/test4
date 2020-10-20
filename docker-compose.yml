@@ -1,0 +1,77 @@
+version: '3'
+services:
+  apache:
+    image: s4475250/apache
+    container_name: myapache
+    volumes:
+            - ./app:/var/www/html
+    ports:
+      - 9000:80
+    deploy:
+     replicas: 4
+     restart_policy:
+       max_attempts: 3
+       condition: on-failure       
+     update_config:
+       parallelism: 3
+       delay: 10s
+    networks:
+              - mynet
+
+
+  mysql:
+    image: mysql:latest
+    #command: "--default-authentication-plugin=mysql_native_password"
+    #restart: always
+    ports:
+      - 3306:3306
+    volumes:
+      - ./data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: project
+      MYSQL_USER: allen
+      MYSQL_PASSWORD: allen
+    networks:
+              - mynet
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: myphpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - 9001:80
+    links:
+      - mysql
+    networks:
+              - mynet
+  nodejs:
+    image: mynodejs
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=test
+    ports:
+      - "8080:8080"
+    deploy:
+     replicas: 4
+     restart_policy:
+       max_attempts: 3
+       condition: on-failure
+     update_config:
+       parallelism: 3
+       delay: 10s
+    networks:
+              - mynet
+
+  proxy:
+      image: mynginx
+      ports:
+        - 80:80
+      deploy:
+        placement:
+          constraints: [node.role == manager]
+      networks:
+              - mynet
+networks:
+        mynet:
